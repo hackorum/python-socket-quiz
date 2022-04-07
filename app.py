@@ -5,13 +5,14 @@ from threading import Thread
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 ip_addr = "127.0.0.1"
-port = 8000
+port = 8080
 
 server.bind((ip_addr, port))
 
 server.listen()
 
 clients = []
+nicknames = []
 
 questions = [
     " What is the Italian word for PIE? \n a.Mozarella\n b.Pasty\n c.Patty\n d.Pizza",
@@ -59,7 +60,7 @@ print("Server has started...")
 def get_qs(conn):
     index = random.randint(0, len(questions) - 1)
     qs = questions[index]
-    answer = answer[index]
+    answer = answers[index]
     conn.send(qs.encode("utf-8"))
     return index, qs, answer
 
@@ -69,12 +70,17 @@ def remove_qs(index):
     answers.pop(index)
 
 
+def remove_nickname(nickname):
+    if nickname in nicknames:
+        nicknames.remove(nickname)
+
+
 def remove(conn):
     if conn in clients:
         clients.remove(conn)
 
 
-def clientthread(conn):
+def clientthread(conn, nickname):
     score = 0
     conn.send("Welcome to the quiz!".encode("utf-8"))
     index, question, answer = get_qs(conn)
@@ -82,15 +88,18 @@ def clientthread(conn):
         try:
             message = conn.recv(2048).decode("utf-8")
             if message:
-                if message.lower() == answer:
+                if message.split(":")[-1].lower() == answer:
                     score += 1
-                    conn.send(f"Correct answer! Your score is: {score}".encode("utf-8"))
+                    conn.send(
+                        f"Correct answer! Your score is: {score}".encode("utf-8"))
                 else:
                     conn.send("Wrong answer!".encode("utf-8"))
                 remove_qs(index)
+                print(answer)
                 index, question, answer = get_qs(conn)
             else:
                 remove(conn)
+                remove_nickname(nickname)
         except:
             continue
 
@@ -98,6 +107,9 @@ def clientthread(conn):
 while True:
     conn, addr = server.accept()
     clients.append(conn)
-    print(addr[0] + "connected")
-    new_thread = Thread(target=clientthread, args=(conn))
+    conn.send("NICKNAME".encode("utf-8"))
+    nickname = conn.recv(2048).decode("utf-8")
+    print(nickname + "connected")
+    nicknames.append(nickname)
+    new_thread = Thread(target=clientthread, args=(conn, nickname))
     new_thread.start()
