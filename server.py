@@ -5,7 +5,7 @@ from threading import Thread
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 ip_addr = "127.0.0.1"
-port = 8080
+port = 5002
 
 server.bind((ip_addr, port))
 
@@ -87,15 +87,16 @@ def clientthread(conn, nickname):
     while True:
         try:
             message = conn.recv(2048).decode("utf-8")
+            print(message.split(":")[-1].lower().replace(" ", ""))
             if message:
-                if message.split(":")[-1].lower() == answer:
+                if message.split(":")[-1].lower().replace(" ", "") == answer:
                     score += 1
                     conn.send(
                         f"Correct answer! Your score is: {score}".encode("utf-8"))
                 else:
                     conn.send("Wrong answer! ".encode("utf-8"))
                 remove_qs(index)
-                print(answer)
+                # print(answer)
                 index, question, answer = get_qs(conn)
             else:
                 remove(conn)
